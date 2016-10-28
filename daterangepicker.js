@@ -1064,15 +1064,10 @@
             this.container[this.drops == 'up' ? 'addClass' : 'removeClass']('dropup');
 
             // Update opens based on $focusedElement
-            if (this.$focusedElement == this.$fromElement) {
-                this.container.removeClass('openscenter');
-                this.container.removeClass('opensleft');
-                this.container.addClass('opensright');
-            } else if (this.$focusedElement == this.$toElement) {
-                this.container.removeClass('openscenter');
-                this.container.removeClass('opensright');
-                this.container.addClass('opensleft');
-            }
+            if (this.$focusedElement == this.$fromElement)
+                this.updateOpens('right');
+            else if (this.$focusedElement == this.$toElement)
+                this.updateOpens('left');
 
             if (this.opens == 'left') {
                 this.container.css({
@@ -1344,6 +1339,7 @@
             if (this.$focusedElement == this.$fromElement || date.isBefore(this.startDate, 'day')) { //picking start
                 this.focusElement(this.$toElement);
                 this.changeElement(this.$fromElement);
+                this.updateOpens('left');
 
                 if (this.timePicker) {
                     var hour = parseInt(this.container.find('.left .hourselect').val(), 10);
@@ -1369,6 +1365,7 @@
             } else { // picking end
                 this.focusElement(this.$fromElement);
                 this.changeElement(this.$toElement);
+                this.updateOpens('right');
 
                 if (this.timePicker) {
                     var hour = parseInt(this.container.find('.right .hourselect').val(), 10);
@@ -1669,6 +1666,12 @@
             else if ($element == this.$toElement) {
                 this.$toElement.attr('value', this.locale.defaultTo);
             }
+        },
+        updateOpens: function (direction) {
+            this.container.removeClass('openscenter');
+            this.container.removeClass('opensleft');
+            this.container.removeClass('opensright');
+            this.container.addClass('opens' + direction);
         }
     };
 
