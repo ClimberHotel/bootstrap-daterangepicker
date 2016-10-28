@@ -1243,6 +1243,10 @@
                 if (!this.alwaysShowCalendars)
                     this.hideCalendars();
                 this.clickApply();
+
+                this.changeElement(this.$fromElement);
+                this.changeElement(this.$toElement);
+                this.changeElement(this.$fromElement.parent());
             }
         },
 
@@ -1357,6 +1361,7 @@
                 this.endDate = null;
                 this.setStartDate(date.clone());
                 this.setElementDefault(this.$toElement);
+                this.updateElement();
             } else if (!this.endDate && date.isBefore(this.startDate)) {
                 //special case: clicking the same date for start/end,
                 //but the time of the end date is before the start date
@@ -1626,12 +1631,12 @@
         },
 
         updateElement: function() {
-            if (this.$fromElement.is('input') && this.autoUpdateInput) {
-                this.$fromElement.val(this.startDate.format(this.locale.format));
+            if (this.$fromElement.is('input') && this.autoUpdateInput && this.startDate != null) {
+                this.$fromElement.attr('value', this.startDate.format(this.locale.format));
                 this.$fromElement.trigger('change');
             }
-            if (this.$toElement.is('input') && this.autoUpdateInput) {
-                this.$toElement.val(this.endDate.format(this.locale.format));
+            if (this.$toElement.is('input') && this.autoUpdateInput && this.endDate != null) {
+                this.$toElement.attr('value', this.endDate.format(this.locale.format));
                 this.$toElement.trigger('change');
             }
         },
@@ -1651,17 +1656,20 @@
                 this.$focusedElement.addClass('focused');
         },
         changeElement: function ($element) {
-            $element.removeClass('changed');
-            setTimeout(function () { this.addClass('changed'); }.bind($element), 0);
+            $element.addClass('changed');
+            $element.on('animationend', this.changeElementEnd.bind($element));
+        },
+        changeElementEnd: function () {
+            this.removeClass('changed');
+            this.off('animationend');
         },
         setElementDefault: function ($element) {
             if ($element == this.$fromElement)
-                this.$fromElement.val(this.locale.defaultFrom);
+                this.$fromElement.attr('value', this.locale.defaultFrom);
             else if ($element == this.$toElement) {
-                this.$toElement.val(this.locale.defaultTo);
+                this.$toElement.attr('value', this.locale.defaultTo);
             }
         }
-
     };
 
     $.fn.daterangepicker = function(options, callback) {
