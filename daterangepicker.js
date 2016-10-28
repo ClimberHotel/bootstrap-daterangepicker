@@ -90,18 +90,21 @@
             options = {};
         
         // Populate fromElement and toElement
-        if (options.fromElement == null) {
-            console.error("Could not start date range picker! Missing fromElement in options.");
+        if (options.fromElement == null || options.fromProxy == null) {
+            console.error("Could not start date range picker! Missing fromElement or fromProxy in options.");
             return;
         }
-        if (options.toElement == null) {
-            console.error("Could not start date range picker! Missing toElement in options.");
+        if (options.toElement == null || options.toProxy == null) {
+            console.error("Could not start date range picker! Missing toElement or toProxy in options.");
             return;
         }
 
         this.$fromElement = $(options.fromElement);
+        this.$fromProxy = $(options.fromProxy);
         this.$toElement = $(options.toElement);
+        this.$toProxy = $(options.toProxy);
         this.$focusedElement = null;
+        this.$focusedProxy = null;
 
         //allow setting options with data attributes
         //data-api options will be overwritten with custom javascript options
@@ -1133,9 +1136,9 @@
             this.previousRightTime = this.endDate.clone();
 
             if (e.currentTarget == this.$fromElement[0])
-                this.focusElement(this.$fromElement);
+                this.focusElement(this.$fromElement, this.$fromProxy);
             else if (e.currentTarget == this.$toElement[0])
-                this.focusElement(this.$toElement);
+                this.focusElement(this.$toElement, this.$toProxy);
 
             this.updateView();
             this.container.show();
@@ -1239,8 +1242,8 @@
                     this.hideCalendars();
                 this.clickApply();
 
-                this.changeElement(this.$fromElement);
-                this.changeElement(this.$toElement);
+                this.changeElement(this.$fromProxy);
+                this.changeElement(this.$toProxy);
                 this.changeElement(this.$fromElement.parent());
             }
         },
@@ -1337,8 +1340,8 @@
             //
 
             if (this.$focusedElement == this.$fromElement || date.isBefore(this.startDate, 'day')) { //picking start
-                this.focusElement(this.$toElement);
-                this.changeElement(this.$fromElement);
+                this.focusElement(this.$toElement, this.$toProxy);
+                this.changeElement(this.$fromProxy);
                 this.updateOpens('left');
 
                 if (this.timePicker) {
@@ -1356,15 +1359,14 @@
                 }
                 this.endDate = null;
                 this.setStartDate(date.clone());
-                this.setElementDefault(this.$toElement);
                 this.updateElement();
             } else if (!this.endDate && date.isBefore(this.startDate)) {
                 //special case: clicking the same date for start/end,
                 //but the time of the end date is before the start date
                 this.setEndDate(this.startDate.clone());
             } else { // picking end
-                this.focusElement(this.$fromElement);
-                this.changeElement(this.$toElement);
+                this.focusElement(this.$fromElement, this.$fromProxy);
+                this.changeElement(this.$toProxy);
                 this.updateOpens('right');
 
                 if (this.timePicker) {
@@ -1644,13 +1646,14 @@
             this.element.removeData();
         },
 
-        focusElement: function ($element) {
-            if (this.$focusedElement != null)
-                this.$focusedElement.removeClass('focused');
+        focusElement: function ($element, $proxy) {
+            if (this.$focusedProxy != null)
+                this.$focusedProxy.removeClass('focused');
             
             this.$focusedElement = $element;
-            if (this.$focusedElement != null)
-                this.$focusedElement.addClass('focused');
+            this.$focusedProxy = $proxy;
+            if (this.$focusedProxy != null)
+                this.$focusedProxy.addClass('focused');
         },
         changeElement: function ($element) {
             $element.addClass('changed');
@@ -1659,13 +1662,6 @@
         changeElementEnd: function () {
             this.removeClass('changed');
             this.off('animationend');
-        },
-        setElementDefault: function ($element) {
-            if ($element == this.$fromElement)
-                this.$fromElement.attr('value', this.locale.defaultFrom);
-            else if ($element == this.$toElement) {
-                this.$toElement.attr('value', this.locale.defaultTo);
-            }
         },
         updateOpens: function (direction) {
             this.container.removeClass('openscenter');
