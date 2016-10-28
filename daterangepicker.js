@@ -65,6 +65,8 @@
 
         this.locale = {
             direction: 'ltr',
+            defaultFrom: 'From',
+            defaultTo: 'To',
             format: moment.localeData().longDateFormat('L'),
             separator: ' - ',
             applyLabel: 'Apply',
@@ -86,6 +88,20 @@
         //custom options from user
         if (typeof options !== 'object' || options === null)
             options = {};
+        
+        // Populate fromElement and toElement
+        if (options.fromElement == null) {
+            console.error("Could not start date range picker! Missing fromElement in options.");
+            return;
+        }
+        if (options.toElement == null) {
+            console.error("Could not start date range picker! Missing toElement in options.");
+            return;
+        }
+
+        this.$fromElement = $(options.fromElement);
+        this.$toElement = $(options.toElement);
+        this.$focusedElement = null;
 
         //allow setting options with data attributes
         //data-api options will be overwritten with custom javascript options
@@ -280,23 +296,13 @@
 
         //if no start/end dates set, check if an input element contains initial values
         if (typeof options.startDate === 'undefined' && typeof options.endDate === 'undefined') {
-            if ($(this.element).is('input[type=text]')) {
-                var val = $(this.element).val(),
-                    split = val.split(this.locale.separator);
-
-                start = end = null;
-
-                if (split.length == 2) {
-                    start = moment(split[0], this.locale.format);
-                    end = moment(split[1], this.locale.format);
-                } else if (this.singleDatePicker && val !== "") {
-                    start = moment(val, this.locale.format);
-                    end = moment(val, this.locale.format);
-                }
-                if (start !== null && end !== null) {
-                    this.setStartDate(start);
-                    this.setEndDate(end);
-                }
+            if (this.$fromElement.is('input[type=text]') && this.$fromElement.val() !== "") {
+                start = moment(this.$fromElement.val(), this.locale.format);
+                this.setStartDate(start);
+            }
+            if (this.$toElement.is('input[type=text]')  && this.$toElement.val() !== "") {
+                end = moment(this.$toElement.val(), this.locale.format);
+                this.setEndDate(end);
             }
         }
 
@@ -426,29 +432,33 @@
             .on('click.daterangepicker', 'li', $.proxy(this.clickRange, this))
             .on('mouseenter.daterangepicker', 'li', $.proxy(this.hoverRange, this))
             .on('mouseleave.daterangepicker', 'li', $.proxy(this.updateFormInputs, this));
-
-        if (this.element.is('input') || this.element.is('button')) {
-            this.element.on({
+        
+        if (this.$fromElement.is('input') || this.$fromElement.is('button')) {
+            this.$fromElement.on({
                 'click.daterangepicker': $.proxy(this.show, this),
                 'focus.daterangepicker': $.proxy(this.show, this),
                 'keyup.daterangepicker': $.proxy(this.elementChanged, this),
                 'keydown.daterangepicker': $.proxy(this.keydown, this)
             });
         } else {
-            this.element.on('click.daterangepicker', $.proxy(this.toggle, this));
+            this.$fromElement.on('click.daterangepicker', $.proxy(this.toggle, this));
+        }
+        if (this.$toElement.is('input') || this.$toElement.is('button')) {
+            this.$toElement.on({
+                'click.daterangepicker': $.proxy(this.show, this),
+                'focus.daterangepicker': $.proxy(this.show, this),
+                'keyup.daterangepicker': $.proxy(this.elementChanged, this),
+                'keydown.daterangepicker': $.proxy(this.keydown, this)
+            });
+        } else {
+            this.$toElement.on('click.daterangepicker', $.proxy(this.toggle, this));
         }
 
         //
         // if attached to a text input, set the initial value
         //
 
-        if (this.element.is('input') && !this.singleDatePicker && this.autoUpdateInput) {
-            this.element.val(this.startDate.format(this.locale.format) + this.locale.separator + this.endDate.format(this.locale.format));
-            this.element.trigger('change');
-        } else if (this.element.is('input') && this.autoUpdateInput) {
-            this.element.val(this.startDate.format(this.locale.format));
-            this.element.trigger('change');
-        }
+        this.updateElement();
 
     };
 
@@ -1033,6 +1043,9 @@
         },
 
         move: function() {
+            if (this.$focusedElement == null)
+                this.focusElement(this.element);
+            
             var parentOffset = { top: 0, left: 0 },
                 containerTop;
             var parentRightEdge = $(window).width();
@@ -1049,6 +1062,17 @@
             else
                 containerTop = this.element.offset().top + this.element.outerHeight() - parentOffset.top;
             this.container[this.drops == 'up' ? 'addClass' : 'removeClass']('dropup');
+
+            // Update opens based on $focusedElement
+            if (this.$focusedElement == this.$fromElement) {
+                this.container.removeClass('openscenter');
+                this.container.removeClass('opensleft');
+                this.container.addClass('opensright');
+            } else if (this.$focusedElement == this.$toElement) {
+                this.container.removeClass('openscenter');
+                this.container.removeClass('opensright');
+                this.container.addClass('opensleft');
+            }
 
             if (this.opens == 'left') {
                 this.container.css({
@@ -1113,6 +1137,11 @@
             this.oldEndDate = this.endDate.clone();
             this.previousRightTime = this.endDate.clone();
 
+            if (e.currentTarget == this.$fromElement[0])
+                this.focusElement(this.$fromElement);
+            else if (e.currentTarget == this.$toElement[0])
+                this.focusElement(this.$toElement);
+
             this.updateView();
             this.container.show();
             this.move();
@@ -1134,6 +1163,7 @@
                 this.callback(this.startDate, this.endDate, this.chosenLabel);
 
             //if picker is attached to a text input, update it
+            this.focusElement(null);
             this.updateElement();
 
             $(document).off('.daterangepicker');
@@ -1290,7 +1320,6 @@
         },
 
         clickDate: function(e) {
-
             if (!$(e.target).hasClass('available')) return;
 
             var title = $(e.target).attr('data-title');
@@ -1308,7 +1337,10 @@
             // * if one of the inputs above the calendars was focused, cancel that manual input
             //
 
-            if (this.endDate || date.isBefore(this.startDate, 'day')) { //picking start
+            if (this.$focusedElement == this.$fromElement || date.isBefore(this.startDate, 'day')) { //picking start
+                this.focusElement(this.$toElement);
+                this.changeElement(this.$fromElement);
+
                 if (this.timePicker) {
                     var hour = parseInt(this.container.find('.left .hourselect').val(), 10);
                     if (!this.timePicker24Hour) {
@@ -1324,11 +1356,15 @@
                 }
                 this.endDate = null;
                 this.setStartDate(date.clone());
+                this.setElementDefault(this.$toElement);
             } else if (!this.endDate && date.isBefore(this.startDate)) {
                 //special case: clicking the same date for start/end,
                 //but the time of the end date is before the start date
                 this.setEndDate(this.startDate.clone());
             } else { // picking end
+                this.focusElement(this.$fromElement);
+                this.changeElement(this.$toElement);
+
                 if (this.timePicker) {
                     var hour = parseInt(this.container.find('.right .hourselect').val(), 10);
                     if (!this.timePicker24Hour) {
@@ -1590,12 +1626,13 @@
         },
 
         updateElement: function() {
-            if (this.element.is('input') && !this.singleDatePicker && this.autoUpdateInput) {
-                this.element.val(this.startDate.format(this.locale.format) + this.locale.separator + this.endDate.format(this.locale.format));
-                this.element.trigger('change');
-            } else if (this.element.is('input') && this.autoUpdateInput) {
-                this.element.val(this.startDate.format(this.locale.format));
-                this.element.trigger('change');
+            if (this.$fromElement.is('input') && this.autoUpdateInput) {
+                this.$fromElement.val(this.startDate.format(this.locale.format));
+                this.$fromElement.trigger('change');
+            }
+            if (this.$toElement.is('input') && this.autoUpdateInput) {
+                this.$toElement.val(this.endDate.format(this.locale.format));
+                this.$toElement.trigger('change');
             }
         },
 
@@ -1603,6 +1640,26 @@
             this.container.remove();
             this.element.off('.daterangepicker');
             this.element.removeData();
+        },
+
+        focusElement: function ($element) {
+            if (this.$focusedElement != null)
+                this.$focusedElement.removeClass('focused');
+            
+            this.$focusedElement = $element;
+            if (this.$focusedElement != null)
+                this.$focusedElement.addClass('focused');
+        },
+        changeElement: function ($element) {
+            $element.removeClass('changed');
+            setTimeout(function () { this.addClass('changed'); }.bind($element), 0);
+        },
+        setElementDefault: function ($element) {
+            if ($element == this.$fromElement)
+                this.$fromElement.val(this.locale.defaultFrom);
+            else if ($element == this.$toElement) {
+                this.$toElement.val(this.locale.defaultTo);
+            }
         }
 
     };

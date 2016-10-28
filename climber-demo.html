@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-US">
+   <head>
+      <meta charset="UTF-8" />
+      <title>A date range picker for Bootstrap, similar to Airbnb</title>
+      <link href="http://netdna.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css" rel="stylesheet">
+      <link rel="stylesheet" type="text/css" media="all" href="daterangepicker.css" />
+      <script type="text/javascript" src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
+      <script type="text/javascript" src="http://netdna.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
+      <script type="text/javascript" src="moment.js"></script>
+      <script type="text/javascript" src="daterangepicker.js"></script>
+
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+        <style type="text/css">
+            .row {
+                background-color: #323742;
+                color: #19c0ff;
+            }
+            .row:hover,
+            .row:hover input.form-control {
+                color: white;
+                cursor: pointer;
+            }
+            input.form-control,
+            input.form-control[readonly] {
+                background-color: transparent;
+                border: none;
+                color: #19c0ff;
+                border-radius: 0;
+            }
+            input.form-control:focus {
+                border: none;
+                box-shadow: none;
+            }
+            input.form-control.focused {
+                color: white;
+                font-weight: bold;
+            }
+
+            input.changed {
+                animation: text-changed 0.4s cubic-bezier(0.65, 0.05, 0.36, 1) 1;
+            }
+
+            .daterangepicker_input {
+                display: none;
+            }
+
+            @keyframes text-changed {
+                0    { color: white; }
+                50%  { background-color: #19c0ff; color: white; }
+                100% { background-color: transparent; color: inherit; }
+            }
+        </style>
+
+   </head>
+   <body>
+        <div class="container">
+            <h1>A date range picker for Bootstrap, similar to Airbnb</h1>
+
+            <div class="row" style="position: relative; background-color: #323742;">
+                <input  id="dateRangePicker_elem"
+                        style="position: absolute; height: 100%; width: 100%; opacity: 0; pointer-events: none;" />
+                <input  id="dateRangePicker_from"
+                        class="form-control date-picker"
+                        style="float: left; width: calc(50% - 16px); text-align: center;"
+                        ng-model="dateRangePicker.dates.startDate"
+                        readonly />
+                <span   class="glyphicon glyphicon-arrow-right"
+                        style="float: left; width: 32px; line-height: 32px; text-align: center;"></span>
+                <input  id="dateRangePicker_to"
+                        class="form-control date-picker"
+                        style="float: left; width: calc(50% - 16px); text-align: center;"
+                        ng-model="vm.dateRangePicker.dates.endDate"
+                        readonly />
+            </div>
+        </div>
+        
+        <script type="text/javascript">
+            $(document).ready(function() {
+                var options = {
+                    autoApply: true,
+                    fromElement: "#dateRangePicker_from",
+                    toElement: "#dateRangePicker_to",
+                    ranges: {
+                        'Today':        [moment(), moment()],
+                        'Yesterday':    [moment().subtract(1, 'day'), moment().subtract(1, 'day')],
+                        'Last 7 Days':  [moment().subtract(7, 'day'), moment()],
+                        'Last 30 Days': [moment().subtract(30, 'day'), moment()],
+                        'This Month':   [moment().startOf('month'), moment().endOf('month')],
+                        'Last Month':   [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')]
+                    },
+                    locale: {
+                        format: 'DD, MMM YYYY'
+                    },
+                    showCustomRangeLabel: false,
+                    alwaysShowCalendars: true,
+                    opens: 'center',
+                    startDate: moment().subtract(1, 'day').startOf('day'),
+                    endDate: moment().startOf('day')
+                }
+
+                $("#dateRangePicker_elem").daterangepicker(options, function(start, end, label) {
+                    console.log('New date range selected: ' + start.format('YYYY-MM-DD') + ' to ' + end.format('YYYY-MM-DD') + ' (predefined range: ' + label + ')');
+                });
+            });
+        </script>
+    </body>
+</html>
