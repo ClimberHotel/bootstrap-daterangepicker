@@ -90,19 +90,21 @@
             options = {};
         
         // Populate fromElement and toElement
-        if (options.fromElement == null || options.fromProxy == null) {
-            console.error("Could not start date range picker! Missing fromElement or fromProxy in options.");
+        if (options.fromElement == null || options.fromText == null || options.fromHighlight == null) {
+            console.error("Could not start date range picker! Missing fromElement or fromText or fromHighlight in options.");
             return;
         }
-        if (options.toElement == null || options.toProxy == null) {
-            console.error("Could not start date range picker! Missing toElement or toProxy in options.");
+        if (options.toElement == null || options.toText == null || options.toHighlight == null) {
+            console.error("Could not start date range picker! Missing toElement or toText or toHighlight in options.");
             return;
         }
 
         this.$fromElement = $(options.fromElement);
-        this.$fromProxy = $(options.fromProxy);
+        this.$fromHighlight = $(options.fromHighlight);
+        this.$fromText = $(options.fromText);
         this.$toElement = $(options.toElement);
-        this.$toProxy = $(options.toProxy);
+        this.$toHighlight = $(options.toHighlight);
+        this.$toText = $(options.toText);
         this.$focusedElement = null;
         this.$focusedProxy = null;
 
@@ -1136,9 +1138,9 @@
             this.previousRightTime = this.endDate.clone();
 
             if (e.currentTarget == this.$fromElement[0])
-                this.focusElement(this.$fromElement, this.$fromProxy);
+                this.focusElement(this.$fromElement, this.$fromText);
             else if (e.currentTarget == this.$toElement[0])
-                this.focusElement(this.$toElement, this.$toProxy);
+                this.focusElement(this.$toElement, this.$toText);
 
             this.updateView();
             this.container.show();
@@ -1152,6 +1154,11 @@
 
             //incomplete date selection, revert to last values
             if (!this.endDate) {
+                if (!this.oldStartDate.isSame(this.startDate))
+                    this.changeElement(this.$fromHighlight);
+                if (!this.oldEndDate.isSame(this.endDate) && this.endDate != null)
+                    this.changeElement(this.$toHighlight);
+
                 this.startDate = this.oldStartDate.clone();
                 this.endDate = this.oldEndDate.clone();
             }
@@ -1240,11 +1247,10 @@
 
                 if (!this.alwaysShowCalendars)
                     this.hideCalendars();
-                this.clickApply();
 
-                this.changeElement(this.$fromProxy);
-                this.changeElement(this.$toProxy);
-                this.changeElement(this.$fromElement.parent());
+                this.clickApply();
+                this.changeElement(this.$fromHighlight);
+                this.changeElement(this.$toHighlight);
             }
         },
 
@@ -1340,8 +1346,8 @@
             //
 
             if (this.$focusedElement == this.$fromElement || date.isBefore(this.startDate, 'day')) { //picking start
-                this.focusElement(this.$toElement, this.$toProxy);
-                this.changeElement(this.$fromProxy);
+                this.focusElement(this.$toElement, this.$toText);
+                this.changeElement(this.$fromHighlight);
                 this.updateOpens('left');
 
                 if (this.timePicker) {
@@ -1357,16 +1363,19 @@
                     var second = this.timePickerSeconds ? parseInt(this.container.find('.left .secondselect').val(), 10) : 0;
                     date = date.clone().hour(hour).minute(minute).second(second);
                 }
-                this.endDate = null;
+
                 this.setStartDate(date.clone());
+                if (this.endDate != null && this.startDate.isAfter(this.endDate))
+                    this.endDate = null;
+
                 this.updateElement();
             } else if (!this.endDate && date.isBefore(this.startDate)) {
                 //special case: clicking the same date for start/end,
                 //but the time of the end date is before the start date
                 this.setEndDate(this.startDate.clone());
             } else { // picking end
-                this.focusElement(this.$fromElement, this.$fromProxy);
-                this.changeElement(this.$toProxy);
+                this.focusElement(this.$fromElement, this.$fromText);
+                this.changeElement(this.$toHighlight);
                 this.updateOpens('right');
 
                 if (this.timePicker) {
@@ -1438,6 +1447,11 @@
         },
 
         clickCancel: function(e) {
+            if (!this.oldStartDate.isSame(this.startDate))
+                this.changeElement(this.$fromHighlight);
+            if (!this.oldEndDate.isSame(this.endDate) && this.endDate != null)
+                this.changeElement(this.$toHighlight);
+
             this.startDate = this.oldStartDate;
             this.endDate = this.oldEndDate;
             this.hide();
@@ -1633,10 +1647,12 @@
             if (this.$fromElement.is('input') && this.autoUpdateInput && this.startDate != null) {
                 this.$fromElement.attr('value', this.startDate.format(this.locale.format));
                 this.$fromElement.trigger('change');
+                this.$fromText.text(this.startDate.format(this.locale.format));
             }
             if (this.$toElement.is('input') && this.autoUpdateInput && this.endDate != null) {
                 this.$toElement.attr('value', this.endDate.format(this.locale.format));
                 this.$toElement.trigger('change');
+                this.$toText.text(this.endDate.format(this.locale.format));
             }
         },
 
